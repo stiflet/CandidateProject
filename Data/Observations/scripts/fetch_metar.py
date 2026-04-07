@@ -14,10 +14,10 @@ def get_metar(dates, filename):
       ORDER BY valid
   """, [urls]).fetchdf()
 
-  df.to_csv(filename)
+  df.to_parquet(filename)
 
 if __name__ == '__main__':
   dates = range(2020, datetime.now().year + 1)
-  filename = 'metar_klga.csv'
+  filename = 'metar_klga.parquet'
 
   get_metar(dates, filename)

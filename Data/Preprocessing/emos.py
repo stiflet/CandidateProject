@@ -2,6 +2,7 @@ from huggingface_hub import upload_file, delete_file
 from scipy.constants import convert_temperature
 import pandas as pd
 import time
+import os
 
 forecasts = pd.read_parquet('/content/WeatherData/Forecasts/gefs/klga.parquet').set_index('valid_time').tz_localize('utc')
 observations = pd.read_parquet('/content/WeatherData/Observations/metar_klga.parquet').set_index('valid')
@@ -13,6 +14,7 @@ emos_subset = forecasts[['init_time', 'lead_time', 'ensemble_member', 'maximum_t
 
 
 lead_times = [f"{i}h" for i in range(3, 13, 3)]
+
 for lead_time in lead_times:
   obs = obs.resample(lead_time).max()
   emos_leadtime = emos_subset[emos_subset.lead_time == lead_time][['ensemble_member', 'maximum_temperature_2m']].pivot(columns = 'ensemble_member', values = 'maximum_temperature_2m')
@@ -26,4 +28,5 @@ for lead_time in lead_times:
     repo_id="Stiflet/WeatherData",
     repo_type="dataset")
   
+  os.remove(f'emos_{lead_time}.parquet')
   time.sleep(5)
