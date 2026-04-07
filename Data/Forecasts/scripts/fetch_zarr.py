@@ -1,33 +1,43 @@
 from pyproj import Transformer
-import rioxarray  # for .rio accessor
+import rioxarray
 import xarray as xr
 import pandas as pd
 from dask.diagnostics import ProgressBar
 
+def fetch_forecast(zarr_url, lat, lon, filename):
+  ds = xr.open_zarr(zarr_url)
 
-ds = xr.open_zarr("https://data.dynamical.org/noaa/hrrr/forecast-48-hour/latest.zarr")
+  lon_lat_to_ds = Transformer.from_crs("EPSG:4326", ds.rio.crs, always_xy=True)
+  
 
-lon_lat_to_ds = Transformer.from_crs("EPSG:4326", ds.rio.crs, always_xy=True)
-lon, lat = -73.8727, 40.7761
+  x, y = lon_lat_to_ds.transform(lon, lat)
+  point = ds.sel(x=x, y=y, method="nearest")
 
-x, y = lon_lat_to_ds.transform(lon, lat)
 
-print(x, y)
+  cols = point.to_array().coords.get("variable").values
 
-point = ds.sel(x=x, y=y, method="nearest")
+  da = point.to_dataarray()
 
-df = point
-cols = df.to_array().coords.get("variable").values
+  with ProgressBar():
+      vals = da.compute().values
 
-da = df.to_dataarray()
+  df = pd.DataFrame(vals.T, columns=cols)
+  df["init_time"] = df.init_time.values
+  df["valid_time"] = df.valid_time.values
+  df["lead_time"] = df.lead_time.values
+  df.set_index(["init_time", "valid_time"], inplace=True)
 
-with ProgressBar():
-    aa = da.compute().values
+  df.to_csv(filename)
 
-bb = pd.DataFrame(aa.T, columns=cols)
-bb["init_time"] = df.init_time.values
-bb["valid_time"] = df.valid_time.values
-bb["lead_time"] = df.lead_time.values
-bb.set_index(["init_time", "valid_time"], inplace=True)
 
-bb.to_csv("hrrr_forecast.csv")
+if __name__ == '__main__':
+
+  zarr_url = "https://data.dynamical.org/noaa/hrrr/forecast-48-hour/latest.zarr"
+  lon, lat = -73.8727, 40.7761
+  filename = "hrrr_forecast.csv"
+
+  fetch_forecast(zarr_url, lat, lon, filename)
+
+
+
+
