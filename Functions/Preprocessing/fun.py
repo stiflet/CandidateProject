@@ -1,9 +1,9 @@
-from ondil.estimators import OnlineDistributionalRegression
+#from ondil.estimators import OnlineDistributionalRegression
 from sklearn.inspection import permutation_importance
 from sklearn.model_selection import train_test_split
 from scipy.constants import convert_temperature
-from ondil.distributions import Normal
-import xgboost as xgb
+#from ondil.distributions import Normal
+#import xgboost as xgb
 import pandas as pd
 import numpy as np
 
@@ -68,10 +68,26 @@ def create_df(forecasts: pd.DataFrame, observations: pd.DataFrame, lead_times: l
     df = df.dropna(subset=["obs"]).reset_index(names="valid_time")
 
 
+
+
     return df
 
 
-def gen_lagged_features(obs:pd.Series, df_og: pd.DataFrame):
+def feature_engineering(obs:pd.Series, df_og: pd.DataFrame):
+    
+    
+    
+    df_og['dayofyear_sin'] = np.sin(2 * np.pi * df_og['dayofyear'] / 365)
+    df_og['dayofyear_cos'] = np.cos(2 * np.pi * df_og['dayofyear'] / 365)
+
+    df_og['hour_sin'] = np.sin(2 * np.pi * df_og['hour'] / 24)
+    df_og['hour_cos'] = np.cos(2 * np.pi * df_og['hour'] / 24)
+
+
+    df_og['lead_hour_sin'] = np.sin(2 * np.pi * df_og['lead_hour'] / 24)
+    df_og['lead_hour_cos'] = np.cos(2 * np.pi * df_og['lead_hour'] / 24)
+    
+    
     # Merging observations available at model run time with the just created df
     obs_runtime = obs.rename('obs_runtime').to_frame()
 
@@ -127,8 +143,6 @@ def repeat_df_static(df, thresholds):
     df_repeated["target"] = (df_repeated['obs'] <= df_repeated["threshold"]).astype(int)
 
     return df_repeated
-
-
 
 
 
